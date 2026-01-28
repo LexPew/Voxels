@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a4e7c741d46c9ac808d0d458040d36f7, type: 3}
+  m_Name: BlockTypeRegistry
+  m_EditorClassIdentifier: 
+  blockTypes:
+  - name: Air
+    solid: 0
+    gravity: 0
+    atlasTiles: 
+  - name: Grass
+    solid: 1
+    gravity: 0
+    atlasTiles: 030000000300000003000000030000009200000002000000
+  - name: Dirt
+    solid: 1
+    gravity: 0
+    atlasTiles: 020000000200000002000000020000000200000002000000
+  - name: Stone
+    solid: 1
+    gravity: 0
+    atlasTiles: 010000000100000001000000010000000100000001000000

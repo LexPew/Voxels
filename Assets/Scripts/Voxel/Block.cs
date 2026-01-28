@@ -13,7 +13,7 @@ public class Block
     }
     //All faces aranged in a clockwise rotation
     //Starting from bottom left corner to bottom right according to forward dir
-    public static readonly Vector3[,] faceVertices =
+    public static readonly Vector3[,] voxelFaceVertices =
     {
         //Front Face
         {
@@ -60,6 +60,16 @@ public class Block
         },
     };
 
+    public static int[] voxelTris = { 0, 1, 3, 3, 1, 2 };
+
+    public static readonly Vector2[] voxelUVs =
+    {
+        new Vector2(0,0),
+        new Vector2(0,1),
+        new Vector2(1,1),
+        new Vector2(1,0)
+    };
+
     public static readonly Vector3Int[] faceDirs =
     {
         new Vector3Int(0,0,-1), //Front -z
@@ -69,8 +79,6 @@ public class Block
         new Vector3Int(0,1,0), //Top +y
         new Vector3Int(0,-1,0), //Top -y
     };
-
-    public static int[] voxelTris = { 0, 1, 3, 3, 1, 2 };
 
 
 }
