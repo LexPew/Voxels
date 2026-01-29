@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using UnityEditor.ShaderGraph.Internal;
 using UnityEngine;
 
 public class World : MonoBehaviour
@@ -15,7 +16,6 @@ public class World : MonoBehaviour
         DrawChunks();
     }
 
-    [ContextMenu("Gen")]
     void PopulateChunks()
     {
         for (int x = 0; x < WorldData.worldSizeInChunks; x++)
@@ -67,4 +67,35 @@ public class World : MonoBehaviour
         }
         return false;
     }
+
+
+    //New Method for grabbing voxels so i can implement perlin, biomes, etc
+    //Will be called by chunks when populating
+    public int GetVoxel(Vector3 position)
+    {
+        //TODO: Replace with better system, perlin noise & SO for each biome maybe a registry like the block types
+        if (position.y == WorldData.chunkSize - 1 && Random.Range(0, 100) >= 20)
+        {
+            return 1;
+        }
+        else if (position.y == WorldData.chunkSize - 1)
+        {
+            return 0;
+        }
+        else if (position.y <= WorldData.chunkSize - 1 && position.y >= WorldData.chunkSize - 4 && Random.Range(0, 100) >= 50)
+        {
+            return 2;
+        }
+        else if (Random.Range(0, 100) >= 20)
+        {
+            return 3;
+        }
+        else
+        {
+            return 0;
+        }
+
+    }
+
 }
+

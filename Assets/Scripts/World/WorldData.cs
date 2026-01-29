@@ -1,7 +1,7 @@
 public class WorldData //Convert to scriptable object at some point
 {
     public static int chunkSize = 16;
-    public static int worldSizeInChunks = 12;
+    public static int worldSizeInChunks = 32;
     public static int worldHeightInChunks = 1;
 
     public static int WorldSizeInVoxelsX => worldSizeInChunks * chunkSize;

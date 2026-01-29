@@ -72,28 +72,11 @@ public class Chunk
             {
                 for (int z = 0; z < WorldData.chunkSize; z++)
                 {
-
-                    if (y == WorldData.chunkSize - 1)
-                    {
-                        SetVoxel(x, y, z, 1);
-                    }
-                    else if (y <= WorldData.chunkSize - 1 && y >= WorldData.chunkSize - 4 && Random.Range(0, 100) >= 50)
-                    {
-                        SetVoxel(x,y,z,2);
-                    }
-                    else if (Random.Range(0, 100) >= 20)
-                        {
-                            SetVoxel(x, y, z, 3);
-                        }
-                        else
-                        {
-                            SetVoxel(x, y, z, 0);
-                        }
-
-                    }
+                    SetVoxel(x,y,z,world.GetVoxel(new Vector3(x,y,z)));
                 }
             }
         }
+    }
 
         void GenerateChunk()
         {
@@ -158,7 +141,10 @@ public class Chunk
                 }
                 else
                 {
-                    // outside chunk => treat as air (for now)
+                    // outside chunk treating as air for now but need to check against other chunks
+
+                    //Check if the next chunk over is valid
+                    //If so access it via world ref then check what the voxel type is 
                     shouldDrawFace = true;
                 }
 
