@@ -8,9 +8,10 @@ using Random = UnityEngine.Random;
 
 public struct ChunkPosition
 {
-    public int x;
-    public int y;
-    public int z;
+    //Read only as we dont want to accidentally change the position of a chunk and cause bugs, if we need to change it we can just create a new one
+    public readonly int x;
+    public readonly int y;
+    public readonly int z;
 
     public ChunkPosition(int _x, int _y, int _z)
     {
@@ -81,11 +82,27 @@ public class World : MonoBehaviour
 
 
 
-
-
-
-
     //Helper functions
+    public bool TryGetChunk(ChunkPosition chunkPosition, out Chunk chunk)
+    {
+        return chunkDictionary.TryGetValue(chunkPosition, out chunk);
+    } 
+    
+    public int GetVoxelInChunk(Vector3Int position, ChunkPosition chunkPosition)
+    {
+        if(TryGetChunk(chunkPosition, out Chunk chunk))
+        {
+            return chunk.GetVoxel(position.x, position.y, position.z);
+        }
+        else
+        {
+            //If chunk is not valid then treat as air
+            return 0;
+        }
+    }
+
+
+
     public int GetVoxel(Vector3 position, ChunkPosition chunkPosition)
     {
         //Use perlin noise

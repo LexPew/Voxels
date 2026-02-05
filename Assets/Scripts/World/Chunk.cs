@@ -42,7 +42,7 @@ public class Chunk
 
         meshFilter = gameObject.AddComponent<MeshFilter>();
         meshRenderer = gameObject.AddComponent<MeshRenderer>();
-        meshRenderer.material = world.masterMaterial;
+        meshRenderer.sharedMaterial = world.masterMaterial;
 
         mesh = new();
 
@@ -51,6 +51,12 @@ public class Chunk
     //Used once the chunk is created to generate and draw the chunk, delayed to allow for chunk population first and its neighbours
     public void DrawChunk()
     {
+        //Reset Mesh Data
+        mesh.Clear();
+        vertices.Clear();
+        triangles.Clear();
+        uvs.Clear();
+
         GenerateChunk();
         SetupMesh();
     }
@@ -112,7 +118,7 @@ public class Chunk
         }
         return true;
     }
-    int GetVoxel(int x, int y, int z)
+    public int GetVoxel(int x, int y, int z)
     {
         //Read from the chunkVoxels array
         return chunkData[x + y * WorldData.chunkSize + z * WorldData.chunkSize * WorldData.chunkSize];
@@ -123,6 +129,7 @@ public class Chunk
         chunkData[x + WorldData.chunkSize * (y + WorldData.chunkSize * z)] = value;
     }
 
+    //Todo: Cleanup & refactor this a bit as its a larger function, maybe split into multiple functions, also add comments
     void AddFaces(int x, int y, int z)
     {
         int thisBlockId = GetVoxel(x, y, z);
@@ -148,27 +155,20 @@ public class Chunk
             {
                 //Check which neighbour chunk we are looking at based on direction, left will be left chunk, right will be right chunk, etc. then check if that chunk is valid and if so check the voxel in that chunk at the correct position, if not valid then treat as air and draw face
                 ChunkPosition neighbourChunk = new ChunkPosition(chunkPosition.x + dir.x, chunkPosition.y + dir.y, chunkPosition.z + dir.z);
-                Debug.Log($"Checking neighbour chunk at {neighbourChunk.x}, {neighbourChunk.y}, {neighbourChunk.z}");
-                if (world.IsChunkValid(neighbourChunk))
+                if(world.TryGetChunk(neighbourChunk, out Chunk chunk))
                 {
-                    Debug.Log("Neighbour chunk is valid");
-                    //Convert our local position to the neighbour chunk's local position
+                    //Calculate local position in neighbour chunk
                     int localX = (nx + WorldData.chunkSize) % WorldData.chunkSize;
                     int localY = (ny + WorldData.chunkSize) % WorldData.chunkSize;
                     int localZ = (nz + WorldData.chunkSize) % WorldData.chunkSize;
 
-                    if (world.GetVoxel(new Vector3(localX, localY, localZ), neighbourChunk) == 0)
-                    {
-                        shouldDrawFace = true;
-                    }
-                    else
-                    {
-                        shouldDrawFace = false;
-                    }
+                    int neighbourId = chunk.GetVoxel(localX, localY, localZ);
+                    shouldDrawFace = !world.blockTypes.blockTypes[neighbourId].solid;
                 }
                 else
                 {
-                    shouldDrawFace = true;
+                    //Chunk has not been generated yet so treat as air but dont face
+                    shouldDrawFace = false;
                 }
 
             }
