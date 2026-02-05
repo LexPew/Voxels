@@ -1,15 +1,36 @@
-using System.Collections;
+using System;
 using System.Collections.Generic;
-using UnityEditor.ShaderGraph.Internal;
 using UnityEngine;
+using Random = UnityEngine.Random;
 
+
+//Struct: Used to easily pass chunk positions around, also used as a key for dictionaries when i implement them
+
+public struct ChunkPosition
+{
+    public int x;
+    public int y;
+    public int z;
+
+    public ChunkPosition(int _x, int _y, int _z)
+    {
+        x = _x;
+        y = _y;
+        z = _z;
+    }
+}
 public class World : MonoBehaviour
 {
     //Data
     public Material masterMaterial;
     public BlockTypes blockTypes;
 
-    private Chunk[,,] chunks = new Chunk[WorldData.worldSizeInChunks, WorldData.worldHeightInChunks, WorldData.worldSizeInChunks];
+    [SerializeField] private Dictionary<ChunkPosition, Chunk> chunkDictionary = new Dictionary<ChunkPosition, Chunk>();
+
+
+    //Perlin Noise
+    [SerializeField] float noiseScale = 80.0f;
+    [SerializeField] float heightAmplification = 10.0f;
     void Start()
     {
         PopulateChunks();
@@ -24,7 +45,7 @@ public class World : MonoBehaviour
             {
                 for (int z = 0; z < WorldData.worldSizeInChunks; z++)
                 {
-                    CreateChunk(new Vector3Int(x,y,z));
+                    CreateChunk(new ChunkPosition(x,y,z));
                 }
             }
         }
@@ -32,69 +53,64 @@ public class World : MonoBehaviour
 
     void DrawChunks()
     {
-        foreach (Chunk chunk in chunks)
+        foreach(Chunk chunk in chunkDictionary.Values)
         {
             chunk.DrawChunk();
         }
     }
 
-    void CreateChunk(Vector3Int position)
+    void CreateChunk(ChunkPosition chunkPosition)
     {
         //Will be used at some point to update neighbours walls 
-        Chunk newChunk = new(position, this);
-        chunks[position.x, position.y, position.z] = newChunk;
+        Chunk newChunk = new(chunkPosition, this);
+        chunkDictionary.Add(chunkPosition, newChunk);
     }
+
+    //Chunk Border Functions
+    public bool IsChunkValid(ChunkPosition chunkPosition)
+    {
+        if(chunkDictionary.ContainsKey(chunkPosition))
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+
+
+
+
+
 
     //Helper functions
-    bool IsChunkInWorld(Vector3 position)
+    public int GetVoxel(Vector3 position, ChunkPosition chunkPosition)
     {
-        if(position.x > 0 && position.x < WorldData.worldSizeInChunks - 1
-            && position.y > 0 && position.y < WorldData.worldHeightInChunks - 1 
-            && position.z > 0 && position.z < WorldData.worldSizeInChunks - 1)
-        {
-            return true;
-        }
-        return false;
-    }
+        //Use perlin noise
+        Vector3 blockOffset = new Vector3(chunkPosition.x, chunkPosition.y, chunkPosition.z) * WorldData.chunkSize;
+        blockOffset += position;
 
-    bool IsVoxelInWorld(Vector3 position)
-    {
-        if(position.x >= 0 && position.x < WorldData.WorldSizeInVoxelsX
-            && position.y >= 0 && position.y < WorldData.WorldSizeInVoxelsY 
-            && position.z >= 0 && position.z < WorldData.WorldSizeInVoxelsZ)
-        {
-            return true;
-        }
-        return false;
-    }
-
-
-    //New Method for grabbing voxels so i can implement perlin, biomes, etc
-    //Will be called by chunks when populating
-    public int GetVoxel(Vector3 position)
-    {
-        //TODO: Replace with better system, perlin noise & SO for each biome maybe a registry like the block types
-        if (position.y == WorldData.chunkSize - 1 && Random.Range(0, 100) >= 20)
+        
+        if(blockOffset.y <= SampleNoise(blockOffset))
         {
             return 1;
-        }
-        else if (position.y == WorldData.chunkSize - 1)
-        {
-            return 0;
-        }
-        else if (position.y <= WorldData.chunkSize - 1 && position.y >= WorldData.chunkSize - 4 && Random.Range(0, 100) >= 50)
-        {
-            return 2;
-        }
-        else if (Random.Range(0, 100) >= 20)
-        {
-            return 3;
         }
         else
         {
             return 0;
         }
 
+    }
+
+    float SampleNoise(Vector3 position)
+    {     
+           float xCoord = position.x / noiseScale;
+        float yCoord = position.z / noiseScale;
+        float sample = Mathf.PerlinNoise(xCoord,yCoord) * heightAmplification;
+
+        return sample;
     }
 
 }

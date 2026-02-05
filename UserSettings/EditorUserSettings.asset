@@ -5,10 +5,19 @@ EditorUserSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 4
   m_ConfigSettings:
+    GraphicsSettingsInspector_UserSettings:
+      value: 18134705175a055722080a3115371d4a0d55006876786860616b0471b8b07a68ffab74f9ee2a3a30300cea1a11320d0beb1a0c25f7060f494b4cc80018eb09361fc211cb1f862d19c51d19dcc413d6ade0d8ddfcddf9f4d9d29195fcfde6ebeae6f0a9c9afa6f8c5b89ff7a1aacececac4eba4d7c9d28bda
+      flags: 0
     RecentlyUsedSceneGuid-0:
       value: 5a5757560101590a5d0c0e24427b5d44434e4c7a7b7a23677f2b4565b7b5353a
       flags: 0
     RecentlyUsedSceneGuid-1:
+      value: 5a5003550754505f5e56547a4373081243151b797f7e77662f2f4f67b1b86569
+      flags: 0
+    RecentlyUsedSceneGuid-2:
+      value: 520651545c0c0f0208565b2413250b144616497f7d7c7568297d1c35e1b7663d
+      flags: 0
+    RecentlyUsedSceneGuid-3:
       value: 5602035354545c0a0e56597a14270941444f487b752d77337b7f4467e4b23168
       flags: 0
     UnityEditor.ShaderGraph.Blackboard:
@@ -37,4 +46,6 @@ EditorUserSettings:
   m_VCHierarchyOverlayIcons: 1
   m_VCOtherOverlayIcons: 1
   m_VCAllowAsyncUpdate: 1
+  m_VCScanLocalPackagesOnConnect: 1
   m_ArtifactGarbageCollection: 1
+  m_CompressAssetsOnImport: 1
