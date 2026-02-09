@@ -29,3 +29,4 @@ MonoBehaviour:
     solid: 1
     gravity: 0
     atlasTiles: 010000000100000001000000010000000100000001000000
+  blockTypesBurst: []

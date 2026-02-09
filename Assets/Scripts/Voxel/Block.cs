@@ -1,5 +1,5 @@
 //This holds the data for a block so we can add it to the mesh
-using UnityEngine;
+using Unity.Mathematics;
 public class Block
 {
     public enum Face
@@ -11,73 +11,84 @@ public class Block
         Top = 4,
         Bottom = 5
     }
-    //All faces aranged in a clockwise rotation
+    //All faces arranged in a clockwise rotation
     //Starting from bottom left corner to bottom right according to forward dir
-    public static readonly Vector3[,] voxelFaceVertices =
+    //TODO: Make this burst compatible via static arrays and indices
+    public static readonly float3[,] voxelFaceVertices =
     {
         //Front Face
         {
-            new Vector3(0,0,0),
-            new Vector3(0,1,0),
-            new Vector3(1,1,0),
-            new Vector3(1,0,0)
+            new float3(0,0,0),
+            new float3(0,1,0),
+            new float3(1,1,0),
+            new float3(1,0,0)
 
         },
         //Back Face
         {
-            new Vector3(1,0,1),
-            new Vector3(1,1,1),
-            new Vector3(0,1,1),
-            new Vector3(0,0,1)
+            new float3(1,0,1),
+            new float3(1,1,1),
+            new float3(0,1,1),
+            new float3(0,0,1)
         },
         //Left Face
         {
-            new Vector3(0,0,1),
-            new Vector3(0,1,1),
-            new Vector3(0,1,0),
-            new Vector3(0,0,0)
+            new float3(0,0,1),
+            new float3(0,1,1),
+            new float3(0,1,0),
+            new float3(0,0,0)
         },
         //Right Face
         {
-            new Vector3(1,0,0),
-            new Vector3(1,1,0),
-            new Vector3(1,1,1),
-            new Vector3(1,0,1)
+            new float3(1,0,0),
+            new float3(1,1,0),
+            new float3(1,1,1),
+            new float3(1,0,1)
         },
         //Top Face
         {
-            new Vector3(0,1,0),
-            new Vector3(0,1,1),
-            new Vector3(1,1,1),
-            new Vector3(1,1,0)
+            new float3(0,1,0),
+            new float3(0,1,1),
+            new float3(1,1,1),
+            new float3(1,1,0)
         },
         //Bottom Face
         {
-            new Vector3(0,0,0),
-            new Vector3(1,0,0),
-            new Vector3(1,0,1),
-            new Vector3(0,0,1)
+            new float3(0,0,0),
+            new float3(1,0,0),
+            new float3(1,0,1),
+            new float3(0,0,1)
         },
     };
 
     public static int[] voxelTris = { 0, 1, 3, 3, 1, 2 };
 
-    public static readonly Vector2[] voxelUVs =
+    public static readonly float2[] voxelUVs =
     {
-        new Vector2(0,0),
-        new Vector2(0,1),
-        new Vector2(1,1),
-        new Vector2(1,0)
+        new float2(0,0),
+        new float2(0,1),
+        new float2(1,1),
+        new float2(1,0)
     };
 
-    public static readonly Vector3Int[] faceDirs =
+    public static readonly int3[] faceDirs =
     {
-        new Vector3Int(0,0,-1), //Front -z
-        new Vector3Int(0,0,1), //Back +z
-        new Vector3Int(-1,0,0), //Left -x
-        new Vector3Int(1,0,0), //Right +x
-        new Vector3Int(0,1,0), //Top +y
-        new Vector3Int(0,-1,0), //Top -y
+        new int3(0,0,-1), //Front -z
+        new int3(0,0,1), //Back +z
+        new int3(-1,0,0), //Left -x
+        new int3(1,0,0), //Right +x
+        new int3(0,1,0), //Top +y
+        new int3(0,-1,0), //Bottom -y
+    };
+
+    public static float3[] voxelFaceNormals =
+    {
+        new float3(0,0,-1), //Front
+        new float3(0,0,1), //Back
+        new float3(-1,0,0), //Left
+        new float3(1,0,0), //Right
+        new float3(0,1,0), //Top
+        new float3(0,-1,0), //Bottom
     };
 
 

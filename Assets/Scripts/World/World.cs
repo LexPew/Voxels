@@ -1,76 +1,106 @@
-using System;
+using System.Collections;
 using System.Collections.Generic;
+using Unity.Collections;
+using Unity.Jobs;
+using Unity.Mathematics;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
 
-//Struct: Used to easily pass chunk positions around, also used as a key for dictionaries when i implement them
-
-public struct ChunkPosition
-{
-    //Read only as we dont want to accidentally change the position of a chunk and cause bugs, if we need to change it we can just create a new one
-    public readonly int x;
-    public readonly int y;
-    public readonly int z;
-
-    public ChunkPosition(int _x, int _y, int _z)
-    {
-        x = _x;
-        y = _y;
-        z = _z;
-    }
-}
 public class World : MonoBehaviour
 {
     //Data
+    
     public Material masterMaterial;
     public BlockTypes blockTypes;
+    public NativeArray<BlockDefBurst> blockTypesBurst;
+    [SerializeField] private Dictionary<int3, Chunk> chunkDictionary = new Dictionary<int3, Chunk>();
 
-    [SerializeField] private Dictionary<ChunkPosition, Chunk> chunkDictionary = new Dictionary<ChunkPosition, Chunk>();
-
-
-    //Perlin Noise
-    [SerializeField] float noiseScale = 80.0f;
-    [SerializeField] float heightAmplification = 10.0f;
+    //New world generator, burst comptable
+    public WorldGenerationSettings worldGenerationSettings;
     void Start()
     {
+        //Setup
+        blockTypesBurst = blockTypes.ToNative();
+
+
         PopulateChunks();
-        DrawChunks();
+        StartCoroutine(DrawChunks());
+    }
+    void OnDestroy()
+    {
+        if (blockTypesBurst.IsCreated)
+        {
+            blockTypesBurst.Dispose();
+        }  
+        foreach (var chunk in chunkDictionary.Values)
+        {
+            chunk.Dispose();
+        }
     }
 
     void PopulateChunks()
     {
+
+
         for (int x = 0; x < WorldData.worldSizeInChunks; x++)
         {
             for (int y = 0; y < WorldData.worldHeightInChunks; y++)
             {
                 for (int z = 0; z < WorldData.worldSizeInChunks; z++)
                 {
-                    CreateChunk(new ChunkPosition(x,y,z));
+                    CreateChunk(new int3(x, y, z)).PopulateChunk();
                 }
             }
         }
-    }
 
-    void DrawChunks()
+
+    }
+    IEnumerator DrawChunks()
     {
-        foreach(Chunk chunk in chunkDictionary.Values)
+        //Combine all chunk jobs
+        JobHandle combined = default;
+
+        foreach (var chunk in chunkDictionary.Values)
         {
-            chunk.DrawChunk();
+            combined = JobHandle.CombineDependencies(combined, chunk.PopulateHandle);
         }
+
+        while (!combined.IsCompleted)
+        {
+            yield return null;
+        }
+
+        combined.Complete();
+
+        foreach (Chunk chunk in chunkDictionary.Values)
+        {
+            chunk.FinalizePopulate();
+        }
+        
+        foreach (Chunk chunk in chunkDictionary.Values)
+        {
+            chunk.Mesh();
+        }
+
+
     }
 
-    void CreateChunk(ChunkPosition chunkPosition)
+
+    Chunk CreateChunk(int3 chunkPosition)
     {
         //Will be used at some point to update neighbours walls 
-        Chunk newChunk = new(chunkPosition, this);
+        Chunk newChunk = new Chunk(chunkPosition, this);
         chunkDictionary.Add(chunkPosition, newChunk);
+
+        return newChunk;
     }
 
+
     //Chunk Border Functions
-    public bool IsChunkValid(ChunkPosition chunkPosition)
+    public bool IsChunkValid(int3 chunkPosition)
     {
-        if(chunkDictionary.ContainsKey(chunkPosition))
+        if (chunkDictionary.ContainsKey(chunkPosition))
         {
             return true;
         }
@@ -83,14 +113,14 @@ public class World : MonoBehaviour
 
 
     //Helper functions
-    public bool TryGetChunk(ChunkPosition chunkPosition, out Chunk chunk)
+    public bool TryGetChunk(int3 chunkPosition, out Chunk chunk)
     {
         return chunkDictionary.TryGetValue(chunkPosition, out chunk);
-    } 
-    
-    public int GetVoxelInChunk(Vector3Int position, ChunkPosition chunkPosition)
+    }
+
+   /*public int GetVoxelInChunk(Vector3Int position, int3 chunkPosition)
     {
-        if(TryGetChunk(chunkPosition, out Chunk chunk))
+        if (TryGetChunk(chunkPosition, out ChunkMulti chunk))
         {
             return chunk.GetVoxel(position.x, position.y, position.z);
         }
@@ -99,36 +129,6 @@ public class World : MonoBehaviour
             //If chunk is not valid then treat as air
             return 0;
         }
-    }
-
-
-
-    public int GetVoxel(Vector3 position, ChunkPosition chunkPosition)
-    {
-        //Use perlin noise
-        Vector3 blockOffset = new Vector3(chunkPosition.x, chunkPosition.y, chunkPosition.z) * WorldData.chunkSize;
-        blockOffset += position;
-
-        
-        if(blockOffset.y <= SampleNoise(blockOffset))
-        {
-            return 1;
-        }
-        else
-        {
-            return 0;
-        }
-
-    }
-
-    float SampleNoise(Vector3 position)
-    {     
-           float xCoord = position.x / noiseScale;
-        float yCoord = position.z / noiseScale;
-        float sample = Mathf.PerlinNoise(xCoord,yCoord) * heightAmplification;
-
-        return sample;
-    }
-
+    }*/
 }
 

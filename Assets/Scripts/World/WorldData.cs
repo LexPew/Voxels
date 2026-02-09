@@ -1,8 +1,10 @@
+using Unity.Collections;
+
 public class WorldData //Convert to scriptable object at some point
 {
-    public static int chunkSize = 16;
-    public static int worldSizeInChunks = 12;
-    public static int worldHeightInChunks = 4;
+    public const int chunkSize = 16;
+    public const int worldSizeInChunks = 8;
+    public const int worldHeightInChunks = 8;
 
     public static int WorldSizeInVoxelsX => worldSizeInChunks * chunkSize;
     public static int WorldSizeInVoxelsY => worldHeightInChunks * chunkSize;
