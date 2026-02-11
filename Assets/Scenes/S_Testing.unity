@@ -17,7 +17,7 @@ RenderSettings:
   m_Fog: 1
   m_FogColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
   m_FogMode: 3
-  m_FogDensity: 0.01
+  m_FogDensity: 0.004
   m_LinearFogStart: 0
   m_LinearFogEnd: 300
   m_AmbientSkyColor: {r: 0.212, g: 0.227, b: 0.259, a: 1}
@@ -422,6 +422,14 @@ PrefabInstance:
       propertyPath: noiseScale
       value: 80
       objectReference: {fileID: 0}
+    - target: {fileID: 7320143126296388521, guid: d9d8e4e72787de0d18766d5e8163353f, type: 3}
+      propertyPath: renderDistance
+      value: 32
+      objectReference: {fileID: 0}
+    - target: {fileID: 7320143126296388521, guid: d9d8e4e72787de0d18766d5e8163353f, type: 3}
+      propertyPath: playerTransform
+      value: 
+      objectReference: {fileID: 963194228}
     - target: {fileID: 7320143126296388521, guid: d9d8e4e72787de0d18766d5e8163353f, type: 3}
       propertyPath: heightAmplification
       value: 70

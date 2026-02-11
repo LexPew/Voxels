@@ -9,12 +9,21 @@ using Random = UnityEngine.Random;
 
 public class World : MonoBehaviour
 {
+    //Player Position used for chunk loading and unloading
+    public Transform playerTransform;
+    //Render distance has to be an even number
+    public int renderDistance = 16;
     //Data
-    
+
     public Material masterMaterial;
     public BlockTypes blockTypes;
     public NativeArray<BlockDefBurst> blockTypesBurst;
+    //Will replace dictionary with a 3d array at some point the size of max view distance in chunks
     [SerializeField] private Dictionary<int3, Chunk> chunkDictionary = new Dictionary<int3, Chunk>();
+    [SerializeField] private List<Chunk> chunksToUpdate = new List<Chunk>();
+
+    ChunkQueuer chunker = new();
+
 
     //New world generator, burst comptable
     public WorldGenerationSettings worldGenerationSettings;
@@ -24,75 +33,70 @@ public class World : MonoBehaviour
         blockTypesBurst = blockTypes.ToNative();
 
 
-        PopulateChunks();
-        StartCoroutine(DrawChunks());
+        Spawn();
+        //StartCoroutine(DrawChunks());
     }
+
+    void Update()
+    {
+        chunker.PopulateChunks();
+        chunker.PopulateChunks();
+    }
+    void LateUpdate()
+    {
+        chunker.DrawChunks();
+        chunker.DrawChunks();
+    }
+    //OnSpawn draw a grid of chunks around the player
+    void Spawn()
+    {
+        //Set the player spawn pos
+        playerTransform.position = GetSpawnPosition();
+
+        //Get Players Position in XZ
+        int2 position = PositionToChunkGrid(playerTransform.position);
+        int halfRender = renderDistance / 2;
+        int startX = position.x - halfRender;
+        int startZ = position.y - halfRender; //Y represents Z
+
+        //Spawn some initial chunks
+        for (int x = startX; x < halfRender; x++)
+        {
+            for (int y = 0; y < WorldData.worldHeightInChunks; y++)
+            {
+                for (int z = startZ; z < halfRender; z++)
+                {
+                    CreateChunk(new int3(x, y, z));
+                }
+            }
+        }
+    }
+
+
+
+
     void OnDestroy()
     {
         if (blockTypesBurst.IsCreated)
         {
             blockTypesBurst.Dispose();
-        }  
+        }
         foreach (var chunk in chunkDictionary.Values)
         {
             chunk.Dispose();
         }
     }
 
-    void PopulateChunks()
-    {
 
-
-        for (int x = 0; x < WorldData.worldSizeInChunks; x++)
-        {
-            for (int y = 0; y < WorldData.worldHeightInChunks; y++)
-            {
-                for (int z = 0; z < WorldData.worldSizeInChunks; z++)
-                {
-                    CreateChunk(new int3(x, y, z)).PopulateChunk();
-                }
-            }
-        }
-
-
-    }
-    IEnumerator DrawChunks()
-    {
-        //Combine all chunk jobs
-        JobHandle combined = default;
-
-        foreach (var chunk in chunkDictionary.Values)
-        {
-            combined = JobHandle.CombineDependencies(combined, chunk.PopulateHandle);
-        }
-
-        while (!combined.IsCompleted)
-        {
-            yield return null;
-        }
-
-        combined.Complete();
-
-        foreach (Chunk chunk in chunkDictionary.Values)
-        {
-            chunk.FinalizePopulate();
-        }
-        
-        foreach (Chunk chunk in chunkDictionary.Values)
-        {
-            chunk.Mesh();
-        }
-
-
-    }
-
+    //This creates a chunk and then also checks for neighbours and updates their walls, via a remesh function in the chunk class.
+    //We also check if there is any chunks neighbouring this to set a flag for whether we need to update the chunk walls later.
 
     Chunk CreateChunk(int3 chunkPosition)
     {
         //Will be used at some point to update neighbours walls 
         Chunk newChunk = new Chunk(chunkPosition, this);
         chunkDictionary.Add(chunkPosition, newChunk);
-
+        chunker.QueueChunk(newChunk);
         return newChunk;
     }
 
@@ -118,17 +122,64 @@ public class World : MonoBehaviour
         return chunkDictionary.TryGetValue(chunkPosition, out chunk);
     }
 
-   /*public int GetVoxelInChunk(Vector3Int position, int3 chunkPosition)
+    public int2 PositionToChunkGrid(Vector3 position)
     {
-        if (TryGetChunk(chunkPosition, out ChunkMulti chunk))
+        int x = Mathf.FloorToInt(position.x / WorldData.chunkSize);
+        int z = Mathf.FloorToInt(position.z / WorldData.chunkSize);
+        return new int2(x, z);
+    }
+
+    public Vector3 GetSpawnPosition()
+    {
+        Vector3 spawnPos = new Vector3(0, 0, 0);
+        int index = WorldData.worldHeightInChunks * WorldData.chunkSize;
+        while (!blockTypesBurst[worldGenerationSettings.GetVoxel(new float3(spawnPos.x, index, spawnPos.z))].solid)
         {
-            return chunk.GetVoxel(position.x, position.y, position.z);
+            index--;
         }
-        else
+        spawnPos.y = index + 2;
+        return spawnPos;
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+    /*    IEnumerator DrawChunks()
         {
-            //If chunk is not valid then treat as air
-            return 0;
-        }
-    }*/
+            //Combine all chunk jobs
+            JobHandle combined = default;
+
+            foreach (var chunk in chunkDictionary.Values)
+            {
+                combined = JobHandle.CombineDependencies(combined, chunk.PopulateHandle);
+            }
+
+            while (!combined.IsCompleted)
+            {
+                yield return null;
+            }
+
+            combined.Complete();
+
+            foreach (Chunk chunk in chunkDictionary.Values)
+            {
+                chunk.FinalizePopulate();
+            }
+
+            foreach (Chunk chunk in chunkDictionary.Values)
+            {
+                chunk.Mesh();
+            }
+
+
+        }*/
 }
 
