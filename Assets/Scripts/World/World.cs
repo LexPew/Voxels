@@ -22,37 +22,43 @@ public class World : MonoBehaviour
     [SerializeField] private Dictionary<int3, Chunk> chunkDictionary = new Dictionary<int3, Chunk>();
     [SerializeField] private List<Chunk> chunksToUpdate = new List<Chunk>();
 
-    ChunkQueuer chunker = new();
+    ChunkQueuer chunker;
 
 
     //New world generator, burst comptable
     public WorldGenerationSettings worldGenerationSettings;
-    void Start()
+    void Awake()
     {
+        chunker = new ChunkQueuer(Unity.Jobs.LowLevel.Unsafe.JobsUtility.JobWorkerMaximumCount);
         //Setup
         blockTypesBurst = blockTypes.ToNative();
-
-
+    }
+    void Start()
+    {
         Spawn();
         //StartCoroutine(DrawChunks());
+
+        //Test chunk 0 neighbour positions
+        TryGetChunk(int3.zero, out Chunk chunk);
     }
 
     void Update()
     {
-        chunker.PopulateChunks();
+        chunker.Update(Time.deltaTime);
         chunker.PopulateChunks();
     }
     void LateUpdate()
     {
         chunker.DrawChunks();
-        chunker.DrawChunks();
     }
+
     //OnSpawn draw a grid of chunks around the player
     void Spawn()
     {
         //Set the player spawn pos
         playerTransform.position = GetSpawnPosition();
-
+        //Disable them until we have some chunks loaded around them so they dont fall through the world
+        playerTransform.gameObject.SetActive(false);
         //Get Players Position in XZ
         int2 position = PositionToChunkGrid(playerTransform.position);
         int halfRender = renderDistance / 2;
@@ -60,16 +66,18 @@ public class World : MonoBehaviour
         int startZ = position.y - halfRender; //Y represents Z
 
         //Spawn some initial chunks
-        for (int x = startX; x < halfRender; x++)
+        for (int x = startX; x < startX + renderDistance; x++)
         {
-            for (int y = 0; y < WorldData.worldHeightInChunks; y++)
+            for (int z = startZ; z < startZ + renderDistance; z++)
             {
-                for (int z = startZ; z < halfRender; z++)
+                for (int y = 0; y < WorldData.worldHeightInChunks; y++)
                 {
                     CreateChunk(new int3(x, y, z));
                 }
+
             }
         }
+        StartCoroutine(EnablePlayerWhenReady());
     }
 
 
@@ -96,11 +104,48 @@ public class World : MonoBehaviour
         //Will be used at some point to update neighbours walls 
         Chunk newChunk = new Chunk(chunkPosition, this);
         chunkDictionary.Add(chunkPosition, newChunk);
+        EstablishNeighbourLinks(newChunk, chunkPosition);
         chunker.QueueChunk(newChunk);
+
+        //Check for any neighbours and link them
+
         return newChunk;
     }
 
+    void EstablishNeighbourLinks(Chunk chunk, int3 chunkPosition)
+    {
+        //Loop through and establish all neighbouring chunks and link them if possible
+        for (int i = 0; i < 6; i++)
+        {
+            int3 neighbourPosition = chunkPosition + Block.faceDirs[i];
+            TryGetChunk(neighbourPosition, out Chunk neighbour);
+            if (neighbour != null)
+            {
+                LinkNeighbours(chunk, neighbour, i);
+            }
+        }
+    }
 
+    //Links chunkA to chunkB in the direction of faceDir, so if faceDir is 0 (front) we will link to chunkB back
+    void LinkNeighbours(Chunk chunkA, Chunk chunkB, int faceDir)
+    {
+        chunkA.neighbours[faceDir] = chunkB;
+        chunkB.neighbours[faceDir ^ 1] = chunkA;
+
+        //Using XOR operator (if both differ == 1) to reverse them with 1 
+        //Front To Back
+        ///000 000
+        ///000 001
+        //Back to Front
+        ///000 001
+        ///000 001
+        ///000 000
+        //Left To Right
+        ///000 010
+        ///000 001
+        ///000 011
+        ///ETC
+    }
     //Chunk Border Functions
     public bool IsChunkValid(int3 chunkPosition)
     {
@@ -141,7 +186,14 @@ public class World : MonoBehaviour
         return spawnPos;
     }
 
-
+    IEnumerator EnablePlayerWhenReady()
+    {
+        while (chunker.chunksLeft > 0)
+        {
+            yield return null;
+        }
+        playerTransform.gameObject.SetActive(true);
+    }
 
 
 

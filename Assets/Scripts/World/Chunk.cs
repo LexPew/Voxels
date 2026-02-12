@@ -18,16 +18,20 @@ public class Chunk
     private Mesh mesh;
 
     //Chunks position
-    int3 chunkPosition;
+    public int3 chunkPosition;
 
     //Chunk Data
     NativeArray<int> chunkData;
+
+    private int dirtyMask = 0; //Bitmask to track which faces need updating, 1 for each face so 6 bits total, if a bit is 1 it means that face needs to be updated
+    public Chunk[] neighbours = new Chunk[6]; //Array to hold references to our 6 neighbours, order is front, back, left, right, top, bottom
 
     //Mesh Data
     NativeList<float3> vertices;
     NativeList<int> triangles;
     NativeList<float3> uvs;
     NativeList<float3> normals;
+    int currentIndex = 0;
 
     //Job Data
     JobHandle buildMeshHandle;
@@ -116,7 +120,183 @@ public class Chunk
         populateHandle.Complete();
 
         populateFinalized = true;
+
     }
+
+    public void RecieveNeighbourChange(Chunk neighbour, int faceDir)
+    {
+        //Bitwise OR the dirtyMask with a bit shifted by the faceDir to mark that face as dirty
+        //So for the front face we should shift 1 by 0, for the back face we shift 1 by 1 and so on, this way we can track which faces need updating with a single integer
+        //E.g 0000001 means the front face is dirty, 0000 010 means the back face is dirty, 0000 011 means both the front and back faces are dirty and so on
+        dirtyMask |= (1 << faceDir);
+        //I love bits :D
+    }
+
+
+
+
+    //Informs neighbours our state has changed
+  /*  public void InformNeighbours()
+    {
+        //Loop through all six neighbours and inform them of us changing 
+        for (int i = 0; i < 6; i++)
+        {
+            //Try get neighbours if they exist
+            int3 neighbourPosition = chunkPosition + Block.faceDirs[i];
+
+            //Uses the faceDirs from the block class as they represent the 6 cardinal directions,
+
+
+            //Try get it and inform
+            world.TryGetChunk(neighbourPosition, out Chunk neighbour);
+            if (neighbour != null)
+            {
+                neighbour.RecieveNeighbourChange(this, i);
+            }
+        }
+    }
+
+    public void RecieveNeighbourChange(Chunk neighbour, int faceDir)
+    {
+        //Now we have this info we need to get the border slice from the neighbour and update our slice at the border aswell
+
+
+        int neighbourStartX = 0;
+        int neighbourEndX = WorldData.chunkSize;
+
+        int neighbourStartZ = 0;
+        int neighbourEndZ = WorldData.chunkSize;
+
+        int neighbourStartY = 0;
+        int neighbourEndY = WorldData.chunkSize;
+
+        int startX = 0;
+        int endX = WorldData.chunkSize;
+
+        int startY = 0;
+        int endY = WorldData.chunkSize;
+
+        int startZ = 0;
+        int endZ = WorldData.chunkSize;
+        //We can use the faceDir to determine where the neighbour slice starts when we extract data
+        switch (faceDir)
+        {
+            case 0: //Front Face -z
+                neighbourStartZ = WorldData.chunkSize - 1;
+                neighbourEndZ = WorldData.chunkSize;
+
+                startZ = 0;
+                endZ = 1;
+                break;
+            case 1: //Back Face +z
+                neighbourStartZ = 0;
+                neighbourEndZ = 1;
+
+                startZ = WorldData.chunkSize - 1;
+                endZ = WorldData.chunkSize;
+                break;
+            case 2: //Left Face -x
+                neighbourStartX = 0;
+                neighbourEndX = 1;
+
+                startX = WorldData.chunkSize - 1;
+                endX = WorldData.chunkSize;
+                break;
+            case 3: //Right Face +x
+                neighbourStartX = WorldData.chunkSize - 1;
+                neighbourEndX = WorldData.chunkSize;
+
+                startX = 0;
+                endX = 1;
+                break;
+            case 4: //Top Face +y
+                neighbourStartY = WorldData.chunkSize - 1;
+                neighbourEndY = WorldData.chunkSize;
+
+                startY = 0;
+                endY = 1;
+                break;
+            case 5: //Bottom Face -y
+                neighbourStartY = 0;
+                neighbourEndY = 1;
+
+                startY = WorldData.chunkSize - 1;
+                endY = WorldData.chunkSize;
+                break;
+
+
+        }
+        //Need an array size of a slice so size chunksi*chunkSize, this way its just the out border slice of the chunk
+        int[] neighbourSlice = new int[WorldData.chunkSize * WorldData.chunkSize];
+        for (int x = neighbourStartX; x < neighbourEndX; x++)
+        {
+            for (int z = neighbourStartZ; z < neighbourEndZ; z++)
+            {
+                for (int y = neighbourStartY; y < neighbourEndY; y++)
+                {
+                    int index = x + y * WorldData.chunkSize + z * WorldData.chunkSize * WorldData.chunkSize;
+                    //Data will be put into the array in order from bottom left to top right so we can just loop through and add them in order
+                    neighbourSlice[x + y * WorldData.chunkSize] = neighbour.chunkData[index];
+                }
+            }
+        }
+
+        //Slow remesh for now no jobs, just update the border data and resend to the mesh
+        //So loop through the slice and compare to the neighbour then if need be remove and append faces appropriate faces
+        for (int x = startX; x < endX; x++)
+        {
+            for (int y = startY; y < endY; y++)
+            {
+                for (int z = startZ; z < endZ; z++)
+                {
+                    //By default we dont generate chunk borders so we just need to check whether to add faces and setmesh
+                    int neighBourIndex = x + y * WorldData.chunkSize;
+                    int neighbourID = neighbourSlice[neighBourIndex];
+                    int ourIndex = x + y * WorldData.chunkSize + z * WorldData.chunkSize * WorldData.chunkSize;
+                    int ourID = chunkData[ourIndex];
+                    bool shouldHaveFace = (neighbourID == 0);
+                    bool hasFace = (ourID != 0);
+                    if (shouldHaveFace && !hasFace)
+                    {
+                        //We need to add a face here as the neighbour has air but we dont
+                        AppendFace(new int3(x, y, z), (Block.Face)faceDir, ourID);
+                    }
+                    else if (!shouldHaveFace && hasFace)
+                    {
+                        //Add later
+                    }
+                }
+            }
+        }
+        SetMesh();
+    }
+    void AppendFace(int3 position, Block.Face face, int blockId)
+    {
+        float3 basePos = position;
+        for (int i = 0; i < 4; i++)
+        {
+            vertices.Add(Block.voxelFaceVertices[(int)face, i] + basePos);
+
+        }
+        for (int i = 0; i < 6; i++)
+        {
+            triangles.Add(currentIndex + Block.voxelTris[i]);
+        }
+
+        for (int i = 0; i < 4; i++)
+        {
+            //TODO: Add uvs
+            //uvs.Add(new Vector3(Block.voxelUVs[i].x, Block.voxelUVs[i].y,
+            // world.blockTypes.blockTypes[blockId].atlasTiles[(int)face]));
+            uvs.Add(new float3(Block.voxelUVs[i].x, Block.voxelUVs[i].y,
+             world.blockTypesBurst[blockId].atlasTiles[(int)face]));
+        }
+        for (int i = 0; i < 4; i++)
+        {
+            normals.Add(Block.voxelFaceNormals[(int)face]);
+        }
+        currentIndex += 4;
+    }*/
 
     //Creates the Mesh and Draws the chunk
     public void Mesh()
@@ -127,7 +307,7 @@ public class Chunk
         triangles = new NativeList<int>(Allocator.Persistent);
         uvs = new NativeList<float3>(Allocator.Persistent);
         normals = new NativeList<float3>(Allocator.Persistent);
-
+        currentIndex = 0;
         BuildMesh buildMeshJob = new BuildMesh
         {
             chunkData = chunkData,
@@ -142,6 +322,16 @@ public class Chunk
         buildMeshHandle = buildMeshJob.Schedule();
         world.StartCoroutine(MeshThread());
     }
+    public void SetMesh()
+    {
+        mesh.SetVertices(vertices.AsArray());
+        mesh.SetIndices(triangles.AsArray(), MeshTopology.Triangles, 0);
+        mesh.SetUVs(0, uvs.AsArray());
+        mesh.SetNormals(normals.AsArray());
+
+        mesh.RecalculateBounds();
+        meshFilter.mesh = mesh;
+    }
     IEnumerator MeshThread()
     {
         while (!buildMeshHandle.IsCompleted)
@@ -150,19 +340,10 @@ public class Chunk
         }
         // Ensure the job is completed before accessing NativeList data
         buildMeshHandle.Complete();
-        mesh.SetVertices(vertices.AsArray());
-        mesh.SetIndices(triangles.AsArray(), MeshTopology.Triangles, 0);
-        mesh.SetUVs(0, uvs.AsArray());
-        mesh.SetNormals(normals.AsArray());
 
-        mesh.RecalculateBounds();
-        meshFilter.mesh = mesh;
-
-        vertices.Dispose();
-        triangles.Dispose();
-        uvs.Dispose();
-        normals.Dispose();
+        SetMesh();
     }
+
 
     [BurstCompile]
     public struct PopulateChunkJob : IJob
@@ -303,7 +484,7 @@ public class Chunk
                 }
                 else
                 {
-                    shouldDrawFace = true;
+                    shouldDrawFace = false;
                 }
 
                 if (shouldDrawFace)
