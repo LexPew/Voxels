@@ -80,9 +80,6 @@ public class World : MonoBehaviour
         StartCoroutine(EnablePlayerWhenReady());
     }
 
-
-
-
     void OnDestroy()
     {
         if (blockTypesBurst.IsCreated)
@@ -104,14 +101,14 @@ public class World : MonoBehaviour
         //Will be used at some point to update neighbours walls 
         Chunk newChunk = new Chunk(chunkPosition, this);
         chunkDictionary.Add(chunkPosition, newChunk);
-        EstablishNeighbourLinks(newChunk, chunkPosition);
         chunker.QueueChunk(newChunk);
 
         //Check for any neighbours and link them
-
+        EstablishNeighbourLinks(newChunk, chunkPosition);
         return newChunk;
     }
 
+    
     void EstablishNeighbourLinks(Chunk chunk, int3 chunkPosition)
     {
         //Loop through and establish all neighbouring chunks and link them if possible
